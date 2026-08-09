@@ -11,23 +11,21 @@
 
 set -euo pipefail
 
-# Walk up from $PWD to find .env/.env.local (mirrors Clerk CLI behavior).
-# Stops at the first directory that provides CLERK_SECRET_KEY.
+# Read CLERK_SECRET_KEY from .env/.env.local, walking up only to the repository
+# root. The files are parsed, not sourced, so they cannot execute code.
+_root="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
 _dir="$PWD"
-while true; do
-  for _envfile in "$_dir/.env" "$_dir/.env.local"; do
-    if [[ -f "$_envfile" ]]; then
-      set -a
-      source "$_envfile"
-      set +a
-    fi
+while [[ -z "${CLERK_SECRET_KEY:-}" ]]; do
+  for _envfile in "$_dir/.env.local" "$_dir/.env"; do
+    [[ -f "$_envfile" ]] || continue
+    _val="$(sed -n 's/^[[:space:]]*CLERK_SECRET_KEY[[:space:]]*=[[:space:]]*//p' "$_envfile" | tail -1)"
+    _val="${_val%\"}"; _val="${_val#\"}"; _val="${_val%\'}"; _val="${_val#\'}"
+    [[ -n "$_val" ]] && export CLERK_SECRET_KEY="$_val" && break
   done
-  [[ -n "${CLERK_SECRET_KEY:-}" ]] && break
-  _parent="$(dirname "$_dir")"
-  [[ "$_parent" == "$_dir" ]] && break
-  _dir="$_parent"
+  [[ "$_dir" == "$_root" || "$_dir" == "/" ]] && break
+  _dir="$(dirname "$_dir")"
 done
-unset _dir _parent _envfile
+unset _dir _root _envfile _val
 
 # Parse --admin flag
 ADMIN=false
