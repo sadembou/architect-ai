@@ -15,10 +15,6 @@ User Prompt: $ARGUMENTS
 Before ANY POST / PATCH / PUT / DELETE, you MUST do ALL of the following in your response:
 
 1. **Check CLERK_SECRET_KEY** — verify it is set:
-   ```bash
-   echo $CLERK_SECRET_KEY | head -c 10
-   ```
-   If empty, stop and ask the user. Do not proceed without a valid key.
 
 2. **Check CLERK_BAPI_SCOPES** — run:
    ```bash
@@ -34,12 +30,14 @@ Before ANY POST / PATCH / PUT / DELETE, you MUST do ALL of the following in your
 
 ## FAST PATH: Common operations (use directly, no spec fetching needed)
 
-For the operations below, skip spec fetching and execute immediately using these exact templates. Substitute `$CLERK_SECRET_KEY`, `$USER_ID`, `$ORG_ID`, `$EMAIL` as needed from the user's context.
+For the operations below, collect the required parameters first, then require explicit user confirmation before executing each mutating curl command. Read-only operations remain eligible for direct execution. Substitute `$CLERK_SECRET_KEY`, `$USER_ID`, `$ORG_ID`, `$EMAIL` as needed from the user's context.
 
 ### Create organization + invite member (two-step)
 
 ```bash
-# Step 1 — Create organization
+# Step 1 — Collect parameters needed for the organization create call
+# Example: name = "Acme Corp", created_by = "$USER_ID"
+# Ask for explicit confirmation before running the mutating curl below.
 ORG=$(curl -s -X POST "https://api.clerk.com/v1/organizations" \
   -H "Authorization: Bearer $CLERK_SECRET_KEY" \
   -H "Content-Type: application/json" \
@@ -49,7 +47,8 @@ echo "$ORG" | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.du
 # Step 2 — Extract org ID
 ORG_ID=$(echo "$ORG" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 
-# Step 3 — Invite member with role
+# Step 3 — Collect invitation parameters (email + role), then ask for explicit confirmation
+# before running the mutating invitation curl below.
 curl -s -X POST "https://api.clerk.com/v1/organizations/${ORG_ID}/invitations" \
   -H "Authorization: Bearer $CLERK_SECRET_KEY" \
   -H "Content-Type: application/json" \
@@ -91,10 +90,11 @@ const invitation = await clerkClient.organizations.createOrganizationInvitation(
 | Private | `private_metadata` | **Server only** | **Server only** | Stripe IDs, compliance flags, internal identifiers |
 | Unsafe | `unsafe_metadata` | Client + Server | Client + Server | Ephemeral UI state, onboarding steps (client-writable — avoid sensitive data) |
 
-**For `plan: 'pro'` and `onboarded: true` — use `public_metadata`** (frontend-readable, server-writable):
+**For `plan: 'pro'` and `onboarded: true` — use `public_metadata`** (frontend-readable, server-writable). Use the dedicated metadata endpoint and ask for explicit confirmation before executing the mutating request.
 
 ```bash
-curl -s -X PATCH "https://api.clerk.com/v1/users/${USER_ID}" \
+# Collect the metadata payload, then ask for explicit confirmation before running this PATCH.
+curl -s -X PATCH "https://api.clerk.com/v1/users/${USER_ID}/metadata?api_version=2026-05-12" \
   -H "Authorization: Bearer $CLERK_SECRET_KEY" \
   -H "Content-Type: application/json" \
   -d '{"public_metadata": {"plan": "pro", "onboarded": true}}' \
@@ -107,14 +107,16 @@ curl -s -X PATCH "https://api.clerk.com/v1/users/${USER_ID}" \
 import { clerkClient } from '@clerk/nextjs/server'
 // OR: import { createClerkClient } from '@clerk/backend'
 
-await clerkClient.users.updateUser(userId, {
+await clerkClient.users.updateUserMetadata(userId, {
   publicMetadata: { plan: 'pro', onboarded: true },   // readable by client, writable server-only
   // privateMetadata: { stripeId: 'cus_xxx' },         // server-only read AND write
   // unsafeMetadata: { step: 'welcome' },              // client-writable, avoid sensitive data
 })
+
+// Use replaceUserMetadata() only when you want a full replacement of the metadata object.
 ```
 
-**Note:** REST API uses `snake_case` (`public_metadata`). SDK uses `camelCase` (`publicMetadata`).
+**Note:** REST API uses `snake_case` (`public_metadata`). SDK uses `camelCase` (`publicMetadata`). Metadata updates deep-merge by default; `replaceUserMetadata()` is the full-replacement variant.
 
 ### List users (last 7 days)
 
@@ -273,23 +275,18 @@ Use the output to determine the latest version and available tags.
 
 `currentUser()` makes a real API call that counts against rate limits. Use `auth()` for just the session claims — it reads from the token without an API call.
 
-### Metadata Overwrites (Not Merges)
+### Metadata deep-merge behavior
 
-`updateUser({ publicMetadata: { role: 'admin' } })` REPLACES all public metadata, not merges. To add a field without losing existing data: read first, spread, then write.
+`updateUserMetadata({ publicMetadata: { role: 'admin' } })` deep-merges metadata entries instead of replacing the whole object. Use `replaceUserMetadata()` when you want full replacement semantics.
 
-Wrong:
 ```typescript
-await clerkClient.users.updateUser(userId, { publicMetadata: { newField: 'value' } })
-```
-This DELETES all other `publicMetadata` fields.
-
-Right:
-```typescript
-const user = await clerkClient.users.getUser(userId)
-await clerkClient.users.updateUser(userId, {
-  publicMetadata: { ...user.publicMetadata, newField: 'value' },
+await clerkClient.users.updateUserMetadata(userId, {
+  publicMetadata: { newField: 'value' },
 })
 ```
+This preserves existing metadata keys and merges the new field in.
+
+Use `replaceUserMetadata()` only when you intentionally want to replace the whole metadata object.
 
 ---
 

@@ -29,7 +29,7 @@ Add a bottom shape panel so users can drag shapes onto the canvas and create new
    - use the default node color
    - use the dragged shape value
 
-6. Generate each node ID using the shape name, timestamp, and a counter.
+6. Generate each node ID using a globally unique value, such as `crypto.randomUUID()` or a globally unique user/client namespace, and keep it stable for the node’s lifetime. Do not derive IDs only from shape name, timestamp, and counter.
 
 7. Add a basic renderer for the custom canvas node type so new nodes are visible.
 

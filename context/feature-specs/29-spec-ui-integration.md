@@ -28,7 +28,7 @@ Integrate spec generation results into the editor so users can view, preview, an
 
 - use existing sidebar layout, do not redesign
 - use shadcn/ui components (Dialog, ScrollArea, Button)
-- use existing colors and tokens from `global.css`
+- use existing colors and tokens from `globals.css`
 - follow `ui-context.md` for spacing and layout
 - keep the list compact and scrollable
 

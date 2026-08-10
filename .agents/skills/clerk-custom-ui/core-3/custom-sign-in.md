@@ -120,9 +120,18 @@ When a user signs in with a valid password from a new device without MFA enabled
 
 ```typescript
 if (signIn.status === 'needs_client_trust') {
-  // Check supportedSecondFactors for available methods (email_code or phone_code)
-  const factors = signIn.supportedSecondFactors
-  // Use the appropriate mfa method to verify
+  const factors = signIn.supportedSecondFactors ?? []
+  const emailFactor = factors.find((factor) => factor.strategy === 'email_code')
+  const phoneFactor = factors.find((factor) => factor.strategy === 'phone_code')
+  const selectedFactor = emailFactor ?? phoneFactor
+
+  if (selectedFactor) {
+    await signIn.prepareSecondFactor({ strategy: selectedFactor.strategy })
+    await signIn.attemptSecondFactor({
+      strategy: selectedFactor.strategy,
+      code: '123456',
+    })
+  }
 }
 ```
 
