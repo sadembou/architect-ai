@@ -123,7 +123,15 @@ import { dark, neobrutalism } from '@clerk/ui/themes'
 
 **CSS `color-scheme` support** — the default theme respects the CSS `color-scheme` property for automatic light/dark mode toggling.
 
-**Available themes:** `dark`, `neobrutalism`, `shadcn`, `simple`
+**Available themes:** `dark`, `default`, `neobrutalism`, `shadesOfPurple`, `shadcn`, `simple`
+
+Use the built-in theme string directly:
+
+```tsx
+<ClerkProvider appearance={{ theme: 'simple' }} />
+```
+
+Do not import a theme from `@clerk/ui/themes` just to use the simple preset.
 
 #### shadcn Theme
 

@@ -43,18 +43,24 @@ SCOPES="${CLERK_BAPI_SCOPES:-}"
 
 # Scope check
 if [[ "$ADMIN" == false ]]; then
+  scope_has() {
+    local value="${1:-}"
+    local token="${2:-}"
+    [[ ",${value}," == *,"${token}",* ]]
+  }
+
   case "$METHOD_UPPER" in
     GET)
       ;; # always allowed
     POST|PUT|PATCH)
-      if [[ "$SCOPES" != *"write"* ]]; then
+      if ! scope_has "$SCOPES" "write"; then
         echo "ERROR: $METHOD_UPPER requests require CLERK_BAPI_SCOPES=\"write\" or --admin flag." >&2
         echo "Current CLERK_BAPI_SCOPES: \"$SCOPES\"" >&2
         exit 1
       fi
       ;;
     DELETE)
-      if [[ "$SCOPES" != *"write"* ]] || [[ "$SCOPES" != *"delete"* ]]; then
+      if ! scope_has "$SCOPES" "write" || ! scope_has "$SCOPES" "delete"; then
         echo "ERROR: DELETE requests require CLERK_BAPI_SCOPES=\"write,delete\" or --admin flag." >&2
         echo "Current CLERK_BAPI_SCOPES: \"$SCOPES\"" >&2
         exit 1

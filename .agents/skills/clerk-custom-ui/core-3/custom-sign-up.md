@@ -206,8 +206,8 @@ export default function SignUpPage() {
 
   if (
     signUp.status === 'missing_requirements' &&
-    // For email OTP: check for phone_number instead of email_address
-    signUp.unverifiedFields.includes('phone_number') &&
+    // For email OTP: check for email_address instead of phone_number
+    signUp.unverifiedFields.includes('email_address') &&
     signUp.missingFields.length === 0
   ) {
     return (

@@ -33,7 +33,15 @@ clerk users list --email-address alice@example.com
 clerk users open user_abc123
 clerk users open user_abc123 --print     # print the URL instead of opening
 
-# Create a user (preferred; curated flags)
+# Create a user (preferred; curated flags). Preview first.
+clerk users create \
+  --email alice@example.com \
+  --password 'SuperSecret123!' \
+  --first-name Alice \
+  --last-name Doe \
+  --dry-run
+
+# Run the live mutation only after explicit confirmation.
 clerk users create \
   --email alice@example.com \
   --password 'SuperSecret123!' \
@@ -41,13 +49,21 @@ clerk users create \
   --last-name Doe \
   --yes
 
-# Equivalent raw BAPI call. Use only when curated flags don't cover a field.
-clerk api /users -d '{
+# Equivalent raw BAPI call. Preview first with --dry-run.
+clerk api /users --dry-run -d '{
   "email_address": ["alice@example.com"],
   "password": "SuperSecret123!",
   "first_name": "Alice",
   "last_name": "Doe"
 }'
+
+# Run the live raw request only after explicit confirmation.
+clerk api /users -d '{
+  "email_address": ["alice@example.com"],
+  "password": "SuperSecret123!",
+  "first_name": "Alice",
+  "last_name": "Doe"
+}' --yes
 
 # Update (PATCH merges)
 clerk api /users/user_abc123 -X PATCH -d '{"first_name":"Alicia"}'
@@ -322,8 +338,15 @@ jq -n '{email_address:["c@d.co"]}' | clerk api /users
 ```sh
 # Always --dry-run first across the whole set. `users list` paginates;
 # bump --limit (max 250) and walk pages with --offset until .hasMore is false.
-for id in $(clerk users list --json --limit 250 | jq -r '.data[] | .id'); do
-  clerk api /users/$id -X PATCH -d '{"public_metadata":{"migrated":true}}' --dry-run
+offset=0
+while :; do
+  page="/tmp/users-${offset}.json"
+  clerk users list --json --limit 250 --offset "$offset" > "$page"
+  for id in $(jq -r '.data[] | .id' "$page"); do
+    clerk api /users/$id/metadata -X PATCH -d '{"public_metadata":{"migrated":true}}' --dry-run
+  done
+  [ "$(jq -r '.hasMore' "$page")" = "true" ] || break
+  offset=$((offset + 250))
 done
 # Re-run without --dry-run once the previews look right
 ```
