@@ -8,16 +8,22 @@ Override Clerk appearance variables using the app’s existing CSS variables. Do
 
 Sign-in and sign-up pages:
 
-- large screens: simple two-panel layout
-- left: compact logo, tagline, short text-only feature list
+- large screens: two-panel layout
+- left: compact logo, bold hero heading + subheading, icon-led feature list, footer copyright
 - right: centered Clerk form
 - small screens: form only
-- no gradients
-- no oversized hero sections
-- no feature cards
 - no scroll-heavy layouts
 
 Keep the layout minimal and professional.
+
+> **Amended after initial build**: the left panel now includes a soft
+> brand-colored radial glow (via `color-mix()` on `--accent-primary`, no
+> hardcoded colors) and a lucide icon badge per feature item, per direct
+> user design feedback against a reference mockup. This supersedes the
+> original "no gradients / no feature cards / no oversized hero" constraints
+> above for this panel specifically — everything else in this spec
+> (CSS-var-only theming, Clerk `dark` theme, `proxy.ts`, env vars) is
+> unchanged. See `components/auth/auth-shell.tsx`.
 
 ## Implementation
 
