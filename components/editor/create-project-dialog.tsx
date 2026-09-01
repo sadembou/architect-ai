@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 interface CreateProjectDialogProps {
   open: boolean
   name: string
-  slug: string
+  roomId: string
   isSubmitting: boolean
   onOpenChange: (open: boolean) => void
   onNameChange: (name: string) => void
@@ -27,7 +27,7 @@ interface CreateProjectDialogProps {
 export function CreateProjectDialog({
   open,
   name,
-  slug,
+  roomId,
   isSubmitting,
   onOpenChange,
   onNameChange,
@@ -57,7 +57,9 @@ export function CreateProjectDialog({
             onChange={(event) => onNameChange(event.target.value)}
           />
           <p className="text-xs text-copy-muted">
-            {slug ? `/${slug}` : "Enter a name to preview the slug"}
+            {roomId
+              ? `Room ID: ${roomId}`
+              : "Enter a name to preview the room ID"}
           </p>
 
           <DialogPatternFooter>
